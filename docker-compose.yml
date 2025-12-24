@@ -1,0 +1,35 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: rently_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: rently_hub_app
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  api:
+    build: .
+    container_name: rently_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql+pymysql://root:rootpassword@db:3306/rently_hub_app
+      PROJECT_NAME: RentlyHub
+      API_V1_STR: /api/v1
+      SECRET_KEY: altere_isso_para_algo_seguro_em_producao
+
+volumes:
+  db_data:

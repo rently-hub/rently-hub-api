@@ -1,10 +1,12 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr
+from .property import Property
 
 class UserBase(BaseModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = True
     full_name: Optional[str] = None
+    properties: List[Property] = []
 
 class UserCreate(UserBase):
     email: EmailStr
@@ -19,3 +21,4 @@ class User(UserBase):
 
     class Config:
         orm_mode = True
+        from_attributes = True

@@ -2,9 +2,13 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str
-    DATABASE_URL: str
-    SECRET_KEY: str # Usado para assinar o JWT
+    PROJECT_NAME: str = "RentlyHub" 
+    DATABASE_URL: str 
+    SECRET_KEY: str 
+
+
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 
+    ALGORITHM: str = "HS256"
 
     class Config:
         env_file = ".env"

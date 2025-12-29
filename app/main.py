@@ -5,7 +5,7 @@ from app.db.session import engine
 from app.db.base import Base  
 from starlette.middleware.cors import CORSMiddleware
 
-# Cria as tabelas no banco de dados (A "migração" automática inicial)
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(

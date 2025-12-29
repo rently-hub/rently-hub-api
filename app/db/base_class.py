@@ -6,7 +6,6 @@ class Base:
     id: Any
     __name__: str
 
-    # Gera o nome da tabela automaticamente (ex: User -> users)
     @declared_attr
     def __tablename__(cls) -> str:
         return cls.__name__.lower()

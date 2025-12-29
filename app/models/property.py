@@ -8,13 +8,15 @@ class Property(Base):
     title = Column(String(255), nullable=False) 
     description = Column(Text, nullable=True)
     address = Column(String(255), nullable=True)
-    photo_url = Column(String(500), nullable=True) # Link da foto (S3/Firebase)
+    photo_url = Column(String(500), nullable=True) 
     
-    # Valores Financeiros e Capacidade
     price_per_day = Column(Float, nullable=False)
     cleaning_fee = Column(Float, default=0.0) 
     max_guests = Column(Integer, default=1)
     
-    # Relacionamento com o Dono (User)
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="properties")
+
+    rentals = relationship("Rental", back_populates="property", cascade="all, delete-orphan")
+
+    expenses = relationship("Expense", back_populates="property", cascade="all, delete-orphan")

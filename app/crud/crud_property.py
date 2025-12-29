@@ -1,12 +1,23 @@
-from typing import List
+from typing import List, Optional
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.crud.base import CRUDBase
 from app.models.property import Property
 from app.schemas.property import PropertyCreate, PropertyUpdate
-
+from app import models
 class CRUDProperty(CRUDBase[Property, PropertyCreate, PropertyUpdate]):
+
+    def get(self, db: Session, id: int) -> Optional[Property]:
+        return (
+            db.query(self.model)
+            .filter(self.model.id == id)
+            .options(
+                joinedload(models.Property.rentals),
+                joinedload(models.Property.expenses)
+            )
+            .first()
+        )
     
     def create_with_owner(
         self, db: Session, *, obj_in: PropertyCreate, owner_id: int
@@ -24,6 +35,7 @@ class CRUDProperty(CRUDBase[Property, PropertyCreate, PropertyUpdate]):
         return (
             db.query(self.model)
             .filter(Property.owner_id == owner_id)
+            .options(joinedload(models.Property.rentals))
             .offset(skip)
             .limit(limit)
             .all()

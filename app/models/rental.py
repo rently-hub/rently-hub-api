@@ -14,8 +14,8 @@ class Rental(Base):
     end_date = Column(Date, nullable=True)
     guest_count = Column(Integer, default=1)
     total_price = Column(Float, nullable=False)
-
     status = Column(String(50), default="active")  # active, cancelled, completed
+    platform_source = Column(String(50), default="Direto") # Airbnb, Booking, etc.
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

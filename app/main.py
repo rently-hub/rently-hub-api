@@ -5,7 +5,7 @@ from app.db.session import engine
 from app.db.base import Base  
 from starlette.middleware.cors import CORSMiddleware
 
-
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(

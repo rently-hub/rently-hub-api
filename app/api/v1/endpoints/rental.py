@@ -4,10 +4,9 @@ from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
 from app.api import deps
-from app.services.rental_service import rental_service # <--- Importante
+from app.services.rental_service import rental_service
 
 router = APIRouter()
-
 
 @router.get("/", response_model=List[schemas.Rental])
 def read_rentals(
@@ -17,11 +16,12 @@ def read_rentals(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Recupera aluguéis.
+    Recupera aluguéis do usuário logado.
     """
-    rentals = crud.rental.get_multi(db=db, skip=skip, limit=limit)
+    rentals = db.query(models.Rental).join(models.Property).filter(
+        models.Property.owner_id == current_user.id
+    ).offset(skip).limit(limit).all()
     return rentals
-
 
 @router.post("/", response_model=schemas.Rental)
 def create_rental(
@@ -31,12 +31,10 @@ def create_rental(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Cria novo aluguel.
-    A lógica de cálculo de preço e validação está dentro do rental_service.
+    Cria novo aluguel, validando propriedade do usuário.
     """
-    rental = rental_service.create_rental(db=db, rental_in=rental_in)
+    rental = rental_service.create_rental(db=db, rental_in=rental_in, owner_id=current_user.id)
     return rental
-
 
 @router.get("/{id}", response_model=schemas.Rental)
 def read_rental(
@@ -48,12 +46,41 @@ def read_rental(
     """
     Busca um aluguel pelo ID.
     """
-    rental = crud.rental.get(db=db, id=id)
+    rental = db.query(models.Rental).filter(models.Rental.id == id).first()
     if not rental:
         raise HTTPException(status_code=404, detail="Aluguel não encontrado")
     
-    
-    if not crud.user.is_superuser(current_user) and (rental.owner_id != current_user.id):
-        raise HTTPException(status_code=400, detail="Sem permissão")
+    # Needs to check property owner
+    property_obj = db.query(models.Property).filter(models.Property.id == rental.property_id).first()
+    if property_obj.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Sem permissão")
         
+    return rental
+
+@router.put("/{id}", response_model=schemas.Rental)
+def update_rental(
+    *,
+    db: Session = Depends(deps.get_db),
+    id: int,
+    rental_in: schemas.RentalUpdate,
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Atualiza um aluguel (ex: mudar valor, hóspedes).
+    """
+    rental = db.query(models.Rental).filter(models.Rental.id == id).first()
+    if not rental:
+        raise HTTPException(status_code=404, detail="Aluguel não encontrado")
+    
+    property_obj = db.query(models.Property).filter(models.Property.id == rental.property_id).first()
+    if property_obj.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Sem permissão")
+    
+    update_data = rental_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(rental, field, value)
+    
+    db.add(rental)
+    db.commit()
+    db.refresh(rental)
     return rental

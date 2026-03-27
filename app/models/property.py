@@ -9,6 +9,7 @@ class Property(Base):
     description = Column(Text, nullable=True)
     address = Column(String(255), nullable=True)
     photo_url = Column(String(500), nullable=True) 
+    ical_url = Column(String(500), nullable=True)
     
     price_per_day = Column(Float, nullable=False)
     cleaning_fee = Column(Float, default=0.0) 

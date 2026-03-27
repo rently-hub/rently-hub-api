@@ -58,6 +58,10 @@ class PropertyService:
 
         return [self._calculate_status(prop) for prop in properties]
     
+    def PropertyCreate(self, db: Session, obj_in: PropertySchema, owner_id: int) -> models.Property:
+        """Cria uma nova propriedade associada ao dono"""
+        return crud.property.create_with_owner(db=db, obj_in=obj_in, owner_id=owner_id)
+    
   
 
 property_service = PropertyService()

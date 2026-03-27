@@ -8,7 +8,7 @@ class RentalBase(BaseModel):
     start_date: date
     end_date: date 
     guest_count: int
-   
+    platform_source: str = "Direto"
 class RentalCreate(RentalBase):
     pass
 
@@ -18,6 +18,7 @@ class RentalUpdate(BaseModel):
     guest_count: int | None = None
     total_price: float | None = None 
     status: str | None = None 
+    platform_source: str | None = None
 
 class Rental(RentalBase):
     id: int

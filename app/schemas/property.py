@@ -10,6 +10,7 @@ class PropertyBase(BaseModel):
     description: Optional[str] = None
     address: Optional[str] = None
     photo_url: Optional[str] = None
+    ical_url: Optional[str] = None
     price_per_day: float            
     cleaning_fee: Optional[float] = 0.0
     max_guests: int              

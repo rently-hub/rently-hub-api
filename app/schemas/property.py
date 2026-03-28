@@ -40,6 +40,9 @@ class Property(PropertyBase):
 
     class Config:
         from_attributes = True
+
 class PropertyDetail(Property):
     rentals: List[Rental] = []
     expenses: List[Expense] = []
+    sync_token: Optional[str] = None
+    export_url: Optional[str] = None

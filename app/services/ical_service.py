@@ -1,10 +1,11 @@
 import urllib.request
 import urllib.error
-from icalendar import Calendar as ICalendar
+from icalendar import Calendar as ICalendar, Event as IEvent
 from sqlalchemy.orm import Session
 from app.models.rental import Rental
 from app.models.property import Property
-from datetime import datetime, timezone
+from datetime import datetime, date, timedelta
+import secrets
 
 def sync_property_ical(db: Session, property_id: int):
     # 1. Obter propriedade
@@ -34,10 +35,9 @@ def sync_property_ical(db: Session, property_id: int):
 
         for component in cal.walk():
             if component.name == "VEVENT":
-                # Extrair Summary (Título/Hóspede) e Start/End dates
+                uid = str(component.get('uid'))
                 summary = str(component.get('summary', 'Reserva Importada'))
                 
-                # O Airbnb geralmente coloca 'Reserved' ou 'Not available' se for oculto, ou o nome se exposto
                 dtstart = component.get('dtstart')
                 dtend = component.get('dtend')
 
@@ -47,38 +47,57 @@ def sync_property_ical(db: Session, property_id: int):
                 start_date = dtstart.dt
                 end_date = dtend.dt
 
-                # Guarantee pure date objects (remove timezone/time)
                 if isinstance(start_date, datetime):
                     start_date = start_date.date()
                 if isinstance(end_date, datetime):
                     end_date = end_date.date()
 
-                # Verifica se a reserva já existe (cruza prop_id + start + end)
+                # 1. Check for EXACT match by UID first (Standard)
                 existing = db.query(Rental).filter(
                     Rental.property_id == property_id,
-                    Rental.start_date == start_date,
-                    Rental.end_date == end_date
+                    Rental.external_uid == uid
                 ).first()
 
-                if not existing:
-                    # Estimar total_price como 0 inicialmente ou multiplicar pela diária
-                    # Calcula dias
-                    diff = (end_date - start_date).days
-                    total_price = (diff * prop.price_per_day) if diff > 0 else 0
-
-                    new_rental = Rental(
-                        property_id=property_id,
-                        start_date=start_date,
-                        end_date=end_date,
-                        guest_count=1, # Default
-                        total_price=total_price,
-                        status="Confirmada",
-                        platform_source=platform
-                    )
-                    db.add(new_rental)
-                    synced_count += 1
-                else:
+                if existing:
+                    # Update dates if changed
+                    if existing.start_date != start_date or existing.end_date != end_date:
+                        existing.start_date = start_date
+                        existing.end_date = end_date
+                        db.add(existing)
                     skipped_count += 1
+                    continue
+
+                # 2. Check for Overlap/Conflict with MANUAL rentals
+                conflict = db.query(Rental).filter(
+                    Rental.property_id == property_id,
+                    Rental.is_external == False,
+                    Rental.status == "active",
+                    Rental.start_date < end_date,
+                    Rental.end_date > start_date
+                ).first()
+
+                if conflict:
+                    # Log conflict or skip
+                    skipped_count += 1
+                    continue
+
+                # 3. Create new external rental
+                diff = (end_date - start_date).days
+                total_price = (diff * prop.price_per_day) if diff > 0 else 0
+
+                new_rental = Rental(
+                    property_id=property_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    guest_count=1,
+                    total_price=total_price,
+                    status="active",
+                    platform_source=platform,
+                    external_uid=uid,
+                    is_external=True
+                )
+                db.add(new_rental)
+                synced_count += 1
 
         db.commit()
         return {
@@ -89,4 +108,46 @@ def sync_property_ical(db: Session, property_id: int):
         }
 
     except Exception as e:
+        db.rollback()
         return {"status": "error", "message": str(e)}
+
+def generate_property_ical(db: Session, prop: Property) -> str:
+    """
+    Gera um arquivo .ics com todos os aluguéis ativos da propriedade.
+    """
+    cal = ICalendar()
+    cal.add('prodid', '-//RentlyHub//rently-hub.com//')
+    cal.add('version', '2.0')
+    cal.add('x-wr-calname', prop.title)
+
+    # Buscar todos os aluguéis não cancelados
+    rentals = db.query(Rental).filter(
+        Rental.property_id == prop.id,
+        Rental.status != "cancelled"
+    ).all()
+
+    for rental in rentals:
+        event = IEvent()
+        event.add('summary', f"Reserva - {prop.title}")
+        event.add('dtstart', rental.start_date)
+        event.add('dtend', rental.end_date)
+        
+        # UID persistente baseado no ID do banco se for manual, ou o original se for externo
+        uid = rental.external_uid or f"rently-{rental.id}@{prop.id}"
+        event.add('uid', uid)
+        
+        event.add('dtstamp', datetime.now())
+        cal.add_component(event)
+
+    return cal.to_ical().decode("utf-8")
+
+def get_or_create_sync_token(db: Session, prop: Property) -> str:
+    """
+    Garante que a propriedade tenha um token único para o link iCal.
+    """
+    if not prop.sync_token:
+        prop.sync_token = secrets.token_urlsafe(32)
+        db.add(prop)
+        db.commit()
+        db.refresh(prop)
+    return prop.sync_token

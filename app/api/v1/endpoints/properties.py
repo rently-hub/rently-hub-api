@@ -1,6 +1,6 @@
 from typing import List, Any
-from fastapi import APIRouter, Depends, HTTPException
-from app.services.ical_service import sync_property_ical
+from fastapi import APIRouter, Depends, HTTPException, Response
+from app.services.ical_service import sync_property_ical, generate_property_ical, get_or_create_sync_token
 from sqlalchemy.orm import Session
 from app import schemas, models
 from app.api import deps
@@ -43,6 +43,16 @@ def read_property(
         
     if property_data.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Sem permissão")
+
+    # Garante o token e o link de exportação apenas para o dono
+    # Pegamos o objeto original do banco para gerar o token se não existir
+    prop_obj = db.query(models.Property).filter(models.Property.id == id).first()
+    token = get_or_create_sync_token(db, prop_obj)
+    
+    # Adicionamos ao response_model
+    # Nota: property_data é um objeto Pydantic retornado pelo service
+    property_data.sync_token = token
+    property_data.export_url = f"/api/v1/properties/export/{token}.ics"
 
     return property_data
 
@@ -139,3 +149,25 @@ def delete_property(
     db.commit()
     
     return {"message": "Propriedade excluída com sucesso"}
+
+@router.get("/export/{token}.ics")
+def export_property_ical(
+    token: str,
+    db: Session = Depends(deps.get_db),
+):
+    """
+    Endpoint público para exportar o calendário via token.
+    """
+    prop = (
+        db.query(models.Property).filter(models.Property.sync_token == token).first()
+    )
+    if not prop:
+        raise HTTPException(status_code=404, detail="Calendário não encontrado")
+
+    ics_content = generate_property_ical(db, prop)
+
+    return Response(
+        content=ics_content,
+        media_type="text/calendar",
+        headers={"Content-Disposition": f"attachment; filename=property_{prop.id}.ics"},
+    )

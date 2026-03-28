@@ -25,6 +25,8 @@ class Rental(RentalBase):
     status: str
     total_price: float
     created_at: Optional[datetime] = None
+    is_external: bool = False
+    external_uid: Optional[str] = None
 
     class Config:
         from_attributes = True

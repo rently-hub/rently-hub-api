@@ -14,6 +14,7 @@ class PropertyBase(BaseModel):
     price_per_day: float            
     cleaning_fee: Optional[float] = 0.0
     max_guests: int              
+    platform_fee_percentage: Optional[float] = 15.0
 
 class PropertyCreate(PropertyBase):
     pass 

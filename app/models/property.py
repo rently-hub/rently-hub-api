@@ -15,6 +15,8 @@ class Property(Base):
     price_per_day = Column(Float, nullable=False)
     cleaning_fee = Column(Float, default=0.0) 
     max_guests = Column(Integer, default=1)
+    platform_fee_percentage = Column(Float, default=15.0) # Taxa padrão Airbnb/Booking
+    property_type = Column(String(20), default="seasonal") # seasonal, fixed
     
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="properties")

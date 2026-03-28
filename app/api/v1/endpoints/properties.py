@@ -64,13 +64,18 @@ def create_property(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Cria uma nova propriedade para o usuário logado.
+    Cria uma nova propriedade para o usuário logado e dispara o sync inicial se houver iCal.
     """
     property_obj = property_service.PropertyCreate(
         db=db, 
         obj_in=property_in, 
         owner_id=current_user.id
     )
+    
+    # Se ja vier com iCal, dispara o primeiro sync
+    if property_obj.ical_url:
+        sync_property_ical(db=db, property_id=property_obj.id)
+        
     return property_obj     
 
 @router.post("/{id}/sync-ical")
@@ -101,11 +106,13 @@ def update_property(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Atualiza uma propriedade.
+    Atualiza uma propriedade. Se o iCal mudar, dispara um novo sync.
     """
     property_obj = db.query(models.Property).filter(models.Property.id == id, models.Property.owner_id == current_user.id).first()
     if not property_obj:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada")
+    
+    old_ical_url = property_obj.ical_url
     
     # Preparamos os dados para atualizar (ignore nulos)
     update_data = property_in.model_dump(exclude_unset=True)
@@ -115,6 +122,11 @@ def update_property(
     db.add(property_obj)
     db.commit()
     db.refresh(property_obj)
+    
+    # Se o iCal foi alterado ou adicionado agora, dispara o sync
+    if property_obj.ical_url and property_obj.ical_url != old_ical_url:
+        sync_property_ical(db=db, property_id=property_obj.id)
+        
     return property_obj
 
 @router.delete("/{id}")

@@ -44,14 +44,24 @@ class OracleService:
             
             total_revenue = sum(r.total_price for r in rentals)
             total_spent = sum(e.amount for e in expenses)
-            net_profit = total_revenue - total_spent
             
-            context += f"\nImóvel: {prop.title}\n"
-            context += f"- Endereço: {prop.address}\n"
-            context += f"- Total de Reservas: {len(rentals)}\n"
-            context += f"- Faturamento Total (Reservas): R$ {total_revenue:.2f}\n"
-            context += f"- Total de Despesas: R$ {total_spent:.2f}\n"
-            context += f"- Lucro Líquido (Faturamento - Despesas): R$ {net_profit:.2f}\n"
+            # Cálculo de Taxas de Plataforma (Apenas para reservas externas)
+            external_revenue = sum(r.total_price for r in rentals if r.is_external)
+            platform_fee = external_revenue * (prop.platform_fee_percentage / 100)
+            
+            # Cálculo de "Economia" (O quanto o user deixou de pagar em taxas por alugar direto)
+            direct_revenue = sum(r.total_price for r in rentals if not r.is_external)
+            estimated_savings = direct_revenue * (prop.platform_fee_percentage / 100)
+            
+            net_profit = total_revenue - total_spent - platform_fee
+            
+            context += f"\nImóvel: {prop.title} (Tipo: {prop.property_type})\n"
+            context += f"- Taxa de Plataforma Base: {prop.platform_fee_percentage}%\n"
+            context += f"- Faturamento Bruto: R$ {total_revenue:.2f}\n"
+            context += f"- Faturamento Direto (S/ Taxas): R$ {direct_revenue:.2f}\n"
+            context += f"- Economia Estimada em Taxas: R$ {estimated_savings:.2f} 🔥\n"
+            context += f"- Total pago em Taxas (Airbnb/Booking): R$ {platform_fee:.2f}\n"
+            context += f"- Lucro Líquido Real: R$ {net_profit:.2f}\n"
             
             if expenses:
                 context += "- Despesas detalhadas (Categoria): \n"
@@ -81,8 +91,10 @@ DIRETRIZES:
 4. Responda SEMPRE em Português do Brasil. NUNCA use termos técnicos em inglês se houver tradução (ex: Use 'Manutenção' em vez de 'Maintenance').
 5. Se não souber algo, admita e sugira entrar em contato com o suporte.
 6. Nunca invente dados que não estão no contexto.
-7. IMPORTANTE: Você TEM ACESSO ao Faturamento Total e ao Lucro Líquido nos dados abaixo. Use-os para análises financeiras.
-8. Nunca exiba IDs internos (ex: ID: 2) no texto da resposta para o usuário. Use apenas os nomes dos imóveis. IDs são apenas para uso técnico no bloco @@COMMAND@@.
+7. IMPORTANTE: Você TEM ACESSO ao Faturamento Bruto, Faturamento Direto (S/ Taxas), Economia Estimada em Taxas e Lucro Líquido Real. Use-os para análises financeiras comparativas.
+8. Valorize as Reservas Diretas: Se o usuário tiver um alto "Faturamento Direto", parabenize-o pela "Economia Estimada em Taxas" 🔥.
+9. Diferencie Imóveis: Alguns imóveis são 'Temporada' (Short-term) e outros são 'Fixo' (Long-term). Responda de acordo com o Tipo de Aluguel informado nos dados.
+10. Nunca exiba IDs internos (ex: ID: 2) no texto da resposta para o usuário. Use apenas os nomes dos imóveis. IDs são apenas para uso técnico no bloco @@COMMAND@@.
 
 ⚡ COMANDOS (AÇÕES):
 Se o usuário quiser realizar uma ação (ex: adicionar gastos ou despesas), você deve incluir um bloco JSON no FINAL da sua resposta precedido pela string '@@COMMAND@@'.

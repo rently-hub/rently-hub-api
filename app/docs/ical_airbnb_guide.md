@@ -3,16 +3,17 @@
 Para manter suas reservas do Airbnb e do RentlyHub sincronizadas, siga estes passos:
 
 ## 1. Importar Calendário do Airbnb (Airbnb -> RentlyHub)
-1. No Airbnb, vá em **Anúncios** e selecione o imóvel.
-2. Vá em **Preços e Disponibilidade** > **Sincronização de Calendário**.
-3. Clique em **Exportar Calendário**.
-4. Copie a URL gerada (termina em `.ics`).
-5. No RentlyHub, abra o modal de seu imóvel, vá em **Sincronizar de Outra Plataforma** e cole o link.
-6. Clique em **Salvar** e depois em **Sincronizar**.
+1. No Airbnb, acesse o menu **Anúncios** no topo da página.
+2. Clique no título do anúncio que deseja sincronizar.
+3. No menu lateral esquerdo, clique em **Preços e Disponibilidade**.
+4. Role a página até encontrar a seção **Sincronização de Calendário**.
+5. Clique em **Exportar Calendário**. 
+   > [!IMPORTANT]
+   > Se estiver usando a versão profissional (Multi-calendar), você deve clicar na engrenagem de configurações do anúncio primeiro.
+6. Copie o link (URL) que termina em `.ics`.
+7. No RentlyHub, cole este link no campo **Sincronizar de Outra Plataforma**.
 
 ## 2. Exportar para o Airbnb (RentlyHub -> Airbnb)
-1. No RentlyHub, abra o modal de seu imóvel e copie o **Link de Exportação (iCal do RentlyHub)**.
-2. No Airbnb, vá em **Anúncios** > **Preços e Disponibilidade** > **Sincronização de Calendário**.
-3. Clique em **Importar Calendário**.
-4. Cole o link do RentlyHub e dê um nome (ex: "RentlyHub Principal").
-5. Clique em **Salvar**.
+1. No RentlyHub, copie o **Link de Exportação**.
+2. No Airbnb, na mesma seção de **Sincronização de Calendário**, clique em **Importar Calendário**.
+3. Cole o link do RentlyHub e nomeie como "RentlyHub".

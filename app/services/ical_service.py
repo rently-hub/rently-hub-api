@@ -8,12 +8,15 @@ from datetime import datetime, date, timedelta
 import secrets
 
 def sync_property_ical(db: Session, property_id: int):
+    print(f"DEBUG: Iniciando sync iCal para propriedade {property_id}")
     # 1. Obter propriedade
     prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop or not prop.ical_url:
+        print(f"DEBUG: Falha no sync - Propriedade {property_id} não encontrada ou sem URL")
         return {"status": "error", "message": "Propriedade não encontrada ou sem iCal configurado"}
 
     url = prop.ical_url
+    print(f"DEBUG: Sincronizando da URL: {url}")
 
     try:
         # 2. Baixar o iCal
@@ -21,6 +24,7 @@ def sync_property_ical(db: Session, property_id: int):
         with urllib.request.urlopen(req) as response:
             ical_string = response.read()
 
+        print(f"DEBUG: iCal baixado com sucesso ({len(ical_string)} bytes)")
         cal = ICalendar.from_ical(ical_string)
         
         synced_count = 0
@@ -52,18 +56,21 @@ def sync_property_ical(db: Session, property_id: int):
                 if isinstance(end_date, datetime):
                     end_date = end_date.date()
 
-                # 1. Check for EXACT match by UID first (Standard)
+                # 1. Check for EXACT match by UID GLOBALLY (UIDs are unique)
                 existing = db.query(Rental).filter(
-                    Rental.property_id == property_id,
                     Rental.external_uid == uid
                 ).first()
 
                 if existing:
-                    # Update dates if changed
-                    if existing.start_date != start_date or existing.end_date != end_date:
-                        existing.start_date = start_date
-                        existing.end_date = end_date
-                        db.add(existing)
+                    # Update dates if it's the same property and they changed
+                    if existing.property_id == property_id:
+                        if existing.start_date != start_date or existing.end_date != end_date:
+                            existing.start_date = start_date
+                            existing.end_date = end_date
+                            db.add(existing)
+                    else:
+                        print(f"DEBUG: UID {uid} já existe na propriedade {existing.property_id}. Ignorando para {property_id}.")
+                    
                     skipped_count += 1
                     continue
 

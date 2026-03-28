@@ -19,6 +19,8 @@ class Rental(Base):
     
     external_uid = Column(String(255), unique=True, index=True, nullable=True)
     is_external = Column(Boolean, default=False)
+    is_paid = Column(Boolean, default=False)
+    paid_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

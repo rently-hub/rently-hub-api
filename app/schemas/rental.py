@@ -19,13 +19,17 @@ class RentalUpdate(BaseModel):
     total_price: float | None = None 
     status: str | None = None 
     platform_source: str | None = None
+    is_paid: bool | None = None
+    paid_at: datetime | None = None
 
 class Rental(RentalBase):
     id: int
     status: str
     total_price: float
     created_at: Optional[datetime] = None
-    is_external: bool = False
+    is_external: bool | None = False
+    is_paid: bool = False
+    paid_at: Optional[datetime] = None
     external_uid: Optional[str] = None
 
     class Config:
